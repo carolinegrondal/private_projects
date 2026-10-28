@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Montørplan Q1 2027</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: verktøylinje → nøkkeltall → tidslinje (Gantt) med detaljpanel til høyre, varsler under */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --sunk:#e9ebe6; --line:#d6d9d2; --fg:#1c2421; --muted:#5f6a64;
+  --accent:#1d5c7a; --accent-ink:#ffffff;
+  --flex:#3d7f63; --win:#2f6c9a; --lock:#46504c; --conf:#b8392f; --new:#9a5b12;
+  --weekend:#eceee9; --holiday:#f1e4dc;
+  --f-display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --dw:15px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1c2320; --sunk:#232b28; --line:#33403a; --fg:#e4e9e5; --muted:#99a49e;
+  --accent:#6fb3d6; --accent-ink:#0d1a20;
+  --flex:#5fae8b; --win:#5d9bcb; --lock:#8c9893; --conf:#e0675b; --new:#d39a4c;
+  --weekend:#19201d; --holiday:#2a2120; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1c2320; --sunk:#232b28; --line:#33403a; --fg:#e4e9e5; --muted:#99a49e;
+  --accent:#6fb3d6; --accent-ink:#0d1a20;
+  --flex:#5fae8b; --win:#5d9bcb; --lock:#8c9893; --conf:#e0675b; --new:#d39a4c;
+  --weekend:#19201d; --holiday:#2a2120; color-scheme:dark}
+*{box-sizing:border-box}
+:root{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(22px,3vw,30px);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;max-width:70ch}
+.tag{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:3px 8px;border-radius:3px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select,input{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:4px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.bar:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+select,input[type=date]{border:1px solid var(--line);background:var(--surface);padding:6px 8px;border-radius:4px}
+label.chk{display:flex;gap:6px;align-items:center;color:var(--muted);cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);padding:10px 14px;border-radius:4px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-family:var(--f-mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:12.5px}
+.stat.warn b{color:var(--conf)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media (max-width:980px){.main{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px}
+.gscroll{overflow-x:auto}
+.gantt{position:relative;width:calc(150px + var(--days) * var(--dw))}
+.grow{display:flex;border-bottom:1px solid var(--line);min-height:58px}
+.grow.head{min-height:44px}
+.glabel{position:sticky;left:0;z-index:6;width:150px;flex:0 0 150px;background:var(--surface);border-right:1px solid var(--line);padding:8px 10px;display:flex;flex-direction:column;justify-content:center}
+.glabel b{font-weight:600}
+.glabel small{color:var(--muted);font-size:11.5px;font-family:var(--f-mono)}
+.track{position:relative;flex:1}
+.daybg{position:absolute;top:0;bottom:0;width:var(--dw)}
+.daybg.we{background:var(--weekend)}
+.daybg.hol{background:var(--holiday)}
+.q1end{position:absolute;top:0;bottom:0;border-left:2px dashed var(--conf);z-index:2;pointer-events:none}
+.q1end span{position:absolute;top:2px;left:4px;font-family:var(--f-mono);font-size:10px;color:var(--conf);white-space:nowrap}
+.wk{position:absolute;top:22px;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);border-left:1px solid var(--line);padding-left:3px;height:22px}
+.mo{position:absolute;top:4px;font-weight:600;font-size:12px}
+.bar{position:absolute;top:12px;height:34px;border-radius:3px;color:#fff;font-size:11.5px;line-height:1.15;padding:3px 6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;border:0;text-align:left;z-index:2;transition:left .35s ease,width .35s ease}
+.bar small{display:block;opacity:.85;font-family:var(--f-mono);font-size:10px}
+.bar.fleks{background:var(--flex)} .bar.vindu{background:var(--win)} .bar.laast{background:var(--lock);background-image:repeating-linear-gradient(135deg,transparent 0 6px,rgba(255,255,255,.12) 6px 12px)}
+.bar.ny{background:var(--new)}
+.bar.moved{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+.bar.conf{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--conf)}
+.bar.sel{outline:3px solid var(--fg);outline-offset:1px;z-index:4}
+.bar.dim{opacity:.16;filter:grayscale(.6)}
+.ghost{position:absolute;top:12px;height:34px;border:1.5px dashed var(--muted);border-radius:3px;z-index:1;pointer-events:none;opacity:.7}
+.winband{position:absolute;bottom:3px;height:4px;background:var(--win);opacity:.35;border-radius:2px;z-index:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
+.legend .lab{margin-right:4px}
+.fbtn{border:1px solid transparent;background:transparent;border-radius:14px;padding:4px 10px;cursor:pointer;color:var(--muted);font-size:12px}
+.fbtn:hover{border-color:var(--line);color:var(--fg)}
+.fbtn[aria-pressed="true"]{border-color:var(--fg);color:var(--fg);background:var(--sunk);font-weight:600}
+.fbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend .static{padding:4px 10px}
+.draft{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--accent);border-left-width:4px;border-radius:4px;padding:10px 14px}
+.draft b{font-weight:600}
+.overlay{position:fixed;inset:0;background:rgba(10,16,14,.45);z-index:30;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dialog{background:var(--surface);border:1px solid var(--line);border-radius:6px;width:min(640px,100%);max-height:100%;display:flex;flex-direction:column}
+.dialog header,.dialog footer{padding:14px 18px;display:flex;flex-direction:column;gap:4px}
+.dialog footer{flex-direction:row;flex-wrap:wrap;gap:8px;justify-content:flex-end;border-top:1px solid var(--line)}
+.dialog h2{font-family:var(--f-display);font-size:18px;margin:0}
+.dialog .body{overflow-y:auto;padding:0 18px 12px;display:flex;flex-direction:column;gap:6px}
+.rv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:8px 0;border-top:1px solid var(--line);align-items:start}
+.rv input{margin-top:3px;width:16px;height:16px}
+.rv label{cursor:pointer}
+.rv small{grid-column:2;color:var(--muted);font-size:12.5px}
+.rvh{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.side{display:flex;flex-direction:column;gap:18px}
+.sec{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sec h2{font-family:var(--f-display);font-size:15px;font-weight:700;margin:0}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-variant-numeric:tabular-nums}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px}
+.btnrow .btn{padding:5px 9px;font-size:13px}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;border:1px solid currentColor}
+.pill.c{color:var(--conf)} .pill.m{color:var(--accent)} .pill.l{color:var(--lock)} .pill.n{color:var(--new)} .pill.ok{color:var(--flex)}
+.empty{color:var(--muted);font-size:13px}
+.notes{display:flex;flex-direction:column}
+.note{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.note:first-child{border-top:0}
+.note p{margin:0;font-size:13px;color:var(--muted);grid-column:1/-1}
+.note .who{font-weight:600}
+.note .dates{font-family:var(--f-mono);font-size:12px}
+.hint{background:var(--sunk);border-radius:4px;padding:10px 12px;font-size:13px}
+.hint b{font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:4px;font-weight:500;z-index:20}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:14px 16px}
+.how div{font-size:13px;color:var(--muted)} .how b{display:block;color:var(--fg);font-size:13.5px;margin-bottom:2px}
+@media (prefers-reduced-motion:reduce){.bar{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <span class="tag">Prototype · eksempeldata</span>
+      <h1 style="margin-top:8px">Montørplan Q1 2027</h1>
+      <p class="sub">Jobbene ligger i en kø per montør. Datoene regnes ut fra rekkefølge og varighet, så når én jobb flytter seg, planlegges resten om automatisk. Endringene er et utkast til du har sett over dem og godkjent.</p>
+    </div>
+    <div class="toolbar">
+      <select id="urgentM" aria-label="Montør for hastejobb"></select>
+      <button class="btn" id="urgentBtn">Legg inn hastejobb</button>
+      <label class="chk"><input type="checkbox" id="buffer"> Bufferdag mellom jobber</label>
+      <button class="btn" id="resetBtn">Tilbakestill</button>
+      <button class="btn primary" id="acceptBtn">Se over og send varsler</button>
+    </div>
+  </header>
+
+  <div class="draft" id="draft" hidden></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="main">
+    <div class="panel">
+      <div class="gscroll"><div class="gantt" id="gantt"></div></div>
+      <div class="legend" id="legend">
+        <span class="lab">Filtrer:</span>
+        <button class="fbtn" data-f="fleks" aria-pressed="false"><i style="background:var(--flex)"></i>Fleksibel</button>
+        <button class="fbtn" data-f="vindu" aria-pressed="false"><i style="background:var(--win)"></i>Kundevindu</button>
+        <button class="fbtn" data-f="laast" aria-pressed="false"><i style="background:var(--lock)"></i>Låst dato</button>
+        <button class="fbtn" data-f="ny" aria-pressed="false"><i style="background:var(--new)"></i>Hastejobb</button>
+        <button class="fbtn" data-f="moved" aria-pressed="false"><i style="background:transparent;box-shadow:0 0 0 2px var(--accent)"></i>Flyttet</button>
+        <button class="fbtn" data-f="conf" aria-pressed="false"><i style="background:transparent;box-shadow:0 0 0 2px var(--conf)"></i>Utenfor kundens vindu</button>
+        <span class="static"><i style="border:1.5px dashed var(--muted)"></i>Opprinnelig plassering</span>
+        <button class="fbtn" id="fclear" hidden>Vis alle</button>
+      </div>
+    </div>
+    <aside class="side">
+      <section class="panel sec" id="detail"></section>
+    </aside>
+  </div>
+
+  <section class="panel">
+    <div class="sec" style="padding-bottom:4px">
+      <span class="eyebrow">Kundekommunikasjon</span>
+      <h2 id="notesTitle">Varsler som sendes automatisk</h2>
+    </div>
+    <div class="sec notes" id="notes" style="padding-top:0"></div>
+  </section>
+
+  <section class="panel">
+    <div class="sec" style="padding-bottom:0"><span class="eyebrow">Prinsippet</span></div>
+    <div class="how">
+      <div><b>Rekkefølge i stedet for datoer</b>Hver jobb har en varighet og en plass i køen. Startdatoen beregnes, så den lagres aldri for hånd.</div>
+      <div><b>Tre typer fleksibilitet</b>Låste jobber står fast. Jobber med kundevindu kan flyttes innenfor vinduet. Fleksible jobber flyttes fritt.</div>
+      <div><b>Ingenting sendes uten godkjenning</b>Endringer er et utkast til planleggeren ser over listen og godkjenner. Hver SMS kan velges bort, og konflikter går til manuell oppfølging.</div>
+      <div><b>Google Kalender som visning</b>Montørene kan fortsatt se jobbene i kalenderen. Planen synkes dit, men endres her.</div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="overlay" id="overlay" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="rvTitle" id="dialog"></div></div>
+
+<script>
+const BASE = Date.UTC(2027,0,4);           // man 4. jan 2027 = dag 0
+const DAYS = 117;                          // til og med 30. april
+const Q1END = 87;                          // 1. april
+const HOL = new Set([80,81,84]);           // skjærtorsdag, langfredag, 2. påskedag
+const WD = ['ma','ti','on','to','fr','lø','sø'];
+const MN = ['jan','feb','mar','apr','mai','jun'];
+const d = s => { const [y,m,dd]=s.split('-').map(Number); return Math.round((Date.UTC(y,m-1,dd)-BASE)/864e5); };
+const dt = n => new Date(BASE + n*864e5);
+const isWork = n => { const w=((n%7)+7)%7; return w<5 && !HOL.has(n); };
+const fmt = n => { const x=dt(n); return `${WD[((n%7)+7)%7]} ${x.getUTCDate()}. ${MN[x.getUTCMonth()]}`; };
+const fmtShort = n => { const x=dt(n); return `${x.getUTCDate()}.${x.getUTCMonth()+1}`; };
+
+const MONTORS = [
+  {id:'a', name:'Anders Berg', team:'Ventilasjon'},
+  {id:'s', name:'Siri Haugen', team:'Varmepumpe'},
+  {id:'j', name:'Jonas Lie',   team:'Elektro'},
+];
+// [sted, oppgave, varighet, type, kontakt, ekstra]
+const RAW = {
+ a:[
+  ['Helsestasjon Øst','Ventilasjonsaggregat',5,'fleks','Kari'],
+  ['Skole Sør','Avtrekk kjøkken',4,'vindu','Per',{latest:'2027-01-29'}],
+  ['Kontorbygg A','Ventilasjon 2. etg',6,'fleks','Lene'],
+  ['Brannstasjon Vest','Ventilasjon garasje',5,'laast','Ola',{fixed:'2027-02-08'}],
+  ['Nordre lager','Varmegjenvinner',4,'fleks','Trond'],
+  ['Barnehage Lia','Ventilasjon',3,'vindu','Ingrid',{latest:'2027-03-05'}],
+  ['Rådhus annekset','Service og innregulering',4,'fleks','Mona'],
+  ['Idrettshall Nord','Ventilasjon hall',3,'vindu','Geir',{latest:'2027-03-24'}],
+  ['Bibliotek Sentrum','Aggregatbytte',2,'laast','Hilde',{fixed:'2027-03-22'}],
+ ],
+ s:[
+  ['Sykehjem Vest','Varmepumpe luft/vann',6,'fleks','Bjørn'],
+  ['Skole Nord','Varmepumper klasserom',5,'vindu','Anne',{latest:'2027-02-05'}],
+  ['Kulturhus','Service varmepumper',3,'fleks','Eirik'],
+  ['Barnehage Bakken','Varmepumpe',2,'fleks','Silje'],
+  ['Politihus Øst','Varmepumpe',4,'laast','Rune',{fixed:'2027-02-22'}],
+  ['Verksted Syd','Varmepumpe hall',6,'vindu','Kjetil',{latest:'2027-03-12'}],
+  ['Legevakt','Varmepumpe',4,'fleks','Marte'],
+  ['Kontorbygg B','Varmepumper',7,'vindu','Stian',{latest:'2027-03-31'}],
+ ],
+ j:[
+  ['Rådhuset','Ladestasjoner p-kjeller',4,'fleks','Mona'],
+  ['Driftsstasjon','Ladestasjoner',5,'vindu','Arne',{latest:'2027-01-29'}],
+  ['Skole Vest','Nødlys',3,'fleks','Tone'],
+  ['Brannstasjon Øst','Ladestasjoner',4,'laast','Vidar',{fixed:'2027-02-15'}],
+  ['Svømmehall','Nødlys og skilt',5,'fleks','Heidi'],
+  ['Bussdepot','Ladeanlegg',8,'vindu','Lars',{latest:'2027-03-19'}],
+  ['Teknisk etat','Tavlebytte',4,'fleks','Nina'],
+  ['Tannklinikk','El-anlegg',3,'vindu','Camilla',{latest:'2027-03-31'}],
+ ],
+};
+
+let jobs, queues, baseline, sent, selected, urgentCount, saved, filters = new Set();
+const saveState = () => { saved = JSON.stringify({jobs, queues, buf:document.getElementById('buffer').checked}); };
+function init(){
+  jobs = {}; queues = {}; sent = []; selected = null; urgentCount = 0;
+  let i = 0;
+  for (const m of MONTORS){
+    queues[m.id] = [];
+    for (const r of RAW[m.id]){
+      const id = 'j'+(++i), x = r[5]||{};
+      jobs[id] = {id, place:r[0], task:r[1], dur:r[2]+Math.ceil(r[2]/2), kind:r[3], contact:r[4],
+        fixed: x.fixed?d(x.fixed):null, latest: x.latest?d(x.latest):null, notBefore:null, extra:0, isNew:false};
+      queues[m.id].push(id);
+    }
+  }
+  plan = schedule();
+  baseline = snapshot();
+  saveState();
+}
+let plan;
+
+function schedule(){
+  const res = {}, buf = document.getElementById('buffer').checked;
+  for (const m of MONTORS){
+    const occ = new Set();
+    const take = (s, n) => { const ds=[]; let k=s; while(ds.length<n){ if(isWork(k)) ds.push(k); k++; } return ds; };
+    for (const id of queues[m.id]){
+      const j = jobs[id]; if (j.kind!=='laast') continue;
+      const ds = take(j.fixed, j.dur+j.extra); ds.forEach(x=>occ.add(x));
+      res[id] = {m:m.id, s:ds[0], e:ds[ds.length-1]};
+    }
+    let cur = 0;
+    for (const id of queues[m.id]){
+      const j = jobs[id]; if (j.kind==='laast') continue;
+      const n = j.dur + j.extra;
+      let s = Math.max(cur, j.notBefore ?? 0), ds;
+      for (let guard=0; guard<400; guard++){
+        while(!isWork(s) || occ.has(s)) s++;
+        ds = []; let k = s, hit = -1;
+        while (ds.length < n){ if (isWork(k)){ if (occ.has(k)){ hit=k; break; } ds.push(k); } k++; }
+        if (hit<0) break;
+        s = hit+1;
+      }
+      ds.forEach(x=>occ.add(x));
+      const e = ds[ds.length-1];
+      res[id] = {m:m.id, s:ds[0], e};
+      cur = e+1; while(!isWork(cur)) cur++;
+      if (buf){ cur++; while(!isWork(cur)) cur++; }
+    }
+  }
+  for (const id in res){ const j=jobs[id]; res[id].conf = j.kind!=='laast' && j.latest!=null && res[id].e > j.latest; }
+  return res;
+}
+const snapshot = () => JSON.parse(JSON.stringify(plan));
+
+function diffs(){
+  const out = [];
+  for (const id in plan){
+    const b = baseline[id], p = plan[id], j = jobs[id];
+    if (!b) out.push({id, type:'ny'});
+    else if (b.s!==p.s || b.m!==p.m) out.push({id, type: p.conf?'conf':'moved', from:b.s, to:p.s});
+    else if (p.conf) out.push({id, type:'conf', from:b.s, to:p.s});
+  }
+  return out.sort((x,y)=>plan[x.id].s-plan[y.id].s);
+}
+
+function render(){
+  plan = schedule();
+  const D = diffs(), dmap = Object.fromEntries(D.map(x=>[x.id,x]));
+  // stats
+  const moved = D.filter(x=>x.type==='moved').length, conf = D.filter(x=>x.type==='conf').length;
+  const lockedHeld = Object.values(jobs).filter(j=>j.kind==='laast').length;
+  const overQ = Object.entries(plan).filter(([id,p])=>p.e>=Q1END).length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><b>${moved}</b><span>jobber flyttet automatisk, kunden får SMS</span></div>
+    <div class="stat ${conf?'warn':''}"><b>${conf}</b><span>utenfor kundens vindu, må ringes</span></div>
+    <div class="stat"><b>${lockedHeld}</b><span>låste datoer holdt</span></div>
+    <div class="stat ${overQ?'warn':''}"><b>${overQ}</b><span>jobber skyves over i Q2</span></div>`;
+  // gantt
+  const g = document.getElementById('gantt');
+  g.style.setProperty('--days', DAYS);
+  const dw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dw'));
+  const bg = Array.from({length:DAYS},(_,n)=> {
+    const w=n%7; const c = HOL.has(n)?'hol':(w>4?'we':''); return c?`<div class="daybg ${c}" style="left:${n*dw}px"></div>`:''; }).join('');
+  let head = '';
+  for (let n=0;n<DAYS;n+=7) head += `<div class="wk" style="left:${n*dw}px">U${1+n/7}</div>`;
+  for (let n=0;n<DAYS;n++){ if (dt(n).getUTCDate()===1 || n===0) head += `<div class="mo" style="left:${n*dw+3}px">${['Januar','Februar','Mars','April'][dt(n).getUTCMonth()]}</div>`; }
+  const q1 = `<div class="q1end" style="left:${Q1END*dw}px"><span>Q2 →</span></div>`;
+  let html = `<div class="grow head"><div class="glabel"><small>Montør</small></div><div class="track">${head}${q1}</div></div>`;
+  for (const m of MONTORS){
+    let bars = '';
+    for (const id of queues[m.id]){
+      const j = jobs[id], p = plan[id], df = dmap[id], b = baseline[id];
+      if (b && b.m===m.id && df && df.type!=='ny' && b.s!==p.s)
+        bars += `<div class="ghost" style="left:${b.s*dw}px;width:${(b.e-b.s+1)*dw}px"></div>`;
+      if (j.latest!=null && j.kind!=='laast') bars += `<div class="winband" style="left:0;width:${(j.latest+1)*dw}px" ${selected===id?'':'hidden'}></div>`;
+      const tags = [j.isNew?'ny':j.kind, df?df.type:''];
+      const dim = filters.size && !tags.some(t=>filters.has(t));
+      const cls = ['bar', j.isNew?'ny':j.kind, df?(df.type==='conf'?'conf':(df.type==='moved'?'moved':'')):'', selected===id?'sel':'', dim?'dim':''].join(' ');
+      const w = Math.max((p.e-p.s+1)*dw-2, 10);
+      bars += `<button class="${cls}" data-id="${id}" style="left:${p.s*dw+1}px;width:${w}px" title="${j.place} – ${j.task} (${fmt(p.s)}–${fmt(p.e)})">${j.place}<small>${fmtShort(p.s)}–${fmtShort(p.e)}</small></button>`;
+    }
+    const load = queues[m.id].reduce((a,id)=>a+jobs[id].dur+jobs[id].extra,0);
+    html += `<div class="grow"><div class="glabel"><b>${m.name}</b><small>${m.team} · ${load} dagsverk</small></div><div class="track">${bg}${q1}${bars}</div></div>`;
+  }
+  g.innerHTML = html;
+  g.querySelectorAll('.bar').forEach(b=>b.onclick=()=>{ selected=b.dataset.id; render(); });
+  renderDetail(dmap);
+  renderNotes(D);
+  const dr = document.getElementById('draft');
+  dr.hidden = !D.length;
+  if (D.length){
+    const smsN = D.filter(x=>x.type!=='conf').length, cN = D.length-smsN;
+    dr.innerHTML = `<span><b>Utkast, ingenting er sendt.</b> ${smsN} kunder får melding når du godkjenner${cN?`, ${cN} må følges opp manuelt`:''}.</span>
+      <span class="btnrow"><button class="btn" id="discard">Forkast endringer</button><button class="btn primary" id="review2">Se over og send</button></span>`;
+    dr.querySelector('#discard').onclick=discard;
+    dr.querySelector('#review2').onclick=openReview;
+  }
+  document.querySelectorAll('.fbtn[data-f]').forEach(b=>b.setAttribute('aria-pressed', filters.has(b.dataset.f)));
+  document.getElementById('fclear').hidden = !filters.size;
+}
+
+function renderDetail(dmap){
+  const el = document.getElementById('detail');
+  if (!selected){
+    el.innerHTML = `<span class="eyebrow">Slik tester du</span><h2>Velg en jobb i tidslinjen</h2>
+      <div class="hint"><b>Prøv dette:</b> Klikk «Helsestasjon Øst» hos Anders og trykk «+1 uke». Se hvordan resten av køen flytter seg rundt den låste jobben på Brannstasjon Vest.</div>
+      <div class="hint"><b>Eller:</b> Legg inn en hastejobb hos Jonas og se hvilke kunder som får SMS, og hvilke som må ringes.</div>`;
+    return;
+  }
+  const j = jobs[selected], p = plan[selected], b = baseline[selected], df = dmap[selected];
+  const mId = p.m, q = queues[mId], idx = q.indexOf(selected);
+  const kindTxt = {fleks:'Fleksibel', vindu:'Kundevindu', laast:'Låst dato'}[j.kind];
+  const status = df ? (df.type==='conf'?'<span class="pill c">Utenfor vindu</span>':df.type==='ny'?'<span class="pill n">Ny jobb</span>':'<span class="pill m">Flyttet</span>') : (j.kind==='laast'?'<span class="pill l">Står fast</span>':'<span class="pill ok">Uendret</span>');
+  const locked = j.kind==='laast';
+  el.innerHTML = `
+    <span class="eyebrow">${kindTxt}</span>
+    <h2>${j.place}</h2>
+    <div>${status}</div>
+    <dl class="kv">
+      <dt>Oppgave</dt><dd>${j.task}</dd>
+      <dt>Montør</dt><dd>${MONTORS.find(m=>m.id===mId).name}</dd>
+      <dt>Kontakt</dt><dd>${j.contact}</dd>
+      <dt>Varighet</dt><dd>${j.dur+j.extra} arbeidsdager${j.extra?` (${j.dur} + ${j.extra} forsinkelse)`:''}</dd>
+      <dt>Ny plan</dt><dd>${fmt(p.s)} – ${fmt(p.e)}</dd>
+      ${b && (b.s!==p.s) ? `<dt>Opprinnelig</dt><dd>${fmt(b.s)} – ${fmt(b.e)}</dd>`:''}
+      ${j.latest!=null && !locked ? `<dt>Senest ferdig</dt><dd>${fmt(j.latest)}</dd>`:''}
+    </dl>
+    <div><div class="eyebrow" style="margin-bottom:6px">Jobben tar lenger tid</div>
+      <div class="btnrow">
+        <button class="btn" data-ex="1">+1 dag</button><button class="btn" data-ex="3">+3 dager</button><button class="btn" data-ex="5">+1 uke</button>
+        <button class="btn" data-ex="0" ${j.extra?'':'disabled'}>Nullstill</button>
+      </div></div>
+    ${locked ? `<div class="hint">Låste jobber flytter seg ikke. De andre jobbene planlegges rundt dem.</div>` : `
+    <div><div class="eyebrow" style="margin-bottom:6px">Rekkefølge i køen</div>
+      <div class="btnrow">
+        <button class="btn" id="up" ${idx===0?'disabled':''}>Flytt tidligere</button>
+        <button class="btn" id="down" ${idx===q.length-1?'disabled':''}>Flytt senere</button>
+      </div></div>
+    <div><label class="eyebrow" for="nb" style="display:block;margin-bottom:6px">Kunden kan tidligst</label>
+      <div class="btnrow"><input type="date" id="nb" min="2027-01-04" max="2027-04-30" value="${j.notBefore!=null?dt(j.notBefore).toISOString().slice(0,10):''}">
+      <button class="btn" id="nbClear" ${j.notBefore==null?'disabled':''}>Fjern</button></div></div>
+    <div><label class="eyebrow" for="mv" style="display:block;margin-bottom:6px">Gi jobben til en annen montør</label>
+      <select id="mv">${MONTORS.map(m=>`<option value="${m.id}" ${m.id===mId?'selected':''}>${m.name}</option>`).join('')}</select></div>`}
+    <button class="btn" id="close">Lukk</button>`;
+  el.querySelectorAll('[data-ex]').forEach(x=>x.onclick=()=>{ const v=+x.dataset.ex; j.extra = v===0?0:j.extra+v; render(); });
+  el.querySelector('#close').onclick=()=>{ selected=null; render(); };
+  if (!locked){
+    el.querySelector('#up').onclick=()=>{ q.splice(idx,1); q.splice(idx-1,0,selected); render(); };
+    el.querySelector('#down').onclick=()=>{ q.splice(idx,1); q.splice(idx+1,0,selected); render(); };
+    el.querySelector('#nb').onchange=e=>{ j.notBefore = e.target.value? d(e.target.value):null; render(); };
+    el.querySelector('#nbClear').onclick=()=>{ j.notBefore=null; render(); };
+    el.querySelector('#mv').onchange=e=>{
+      const to = e.target.value; q.splice(idx,1);
+      const tq = queues[to]; let pos = tq.findIndex(id=>plan[id].s > p.s); if (pos<0) pos = tq.length;
+      tq.splice(pos,0,selected); render(); };
+  }
+}
+
+function renderNotes(D){
+  const el = document.getElementById('notes');
+  const title = document.getElementById('notesTitle');
+  if (!D.length){
+    title.textContent = sent.length ? 'Sendte varsler' : 'Varsler til kunder';
+    el.innerHTML = sent.length
+      ? sent.map(s=>`<div class="note"><span class="who">${s.contact} · ${s.place}</span><span class="pill ${s.call?'c':'m'}">${s.call?'Følges opp manuelt':'SMS sendt, venter på svar'}</span><span class="dates">${s.txt}</span></div>`).join('')
+      : `<div class="empty">Ingen endringer ennå. Når planen endres, vises meldingene her som et utkast. Ingenting sendes før du godkjenner.</div>`;
+    return;
+  }
+  title.textContent = `Utkast: ${D.length} kunder berøres, venter på godkjenning`;
+  el.innerHTML = D.map(x=>{
+    const j=jobs[x.id], p=plan[x.id];
+    if (x.type==='ny') return `<div class="note"><span class="who">${j.contact} · ${j.place}</span><span class="pill n">Ny jobb</span>
+      <span class="dates">${fmt(p.s)} – ${fmt(p.e)}</span><p>Bekreftelse sendes: «Hei ${j.contact}. Vi kommer ${fmt(p.s)} for ${j.task.toLowerCase()}.»</p></div>`;
+    if (x.type==='conf') return `<div class="note"><span class="who">${j.contact} · ${j.place}</span><span class="pill c">Må ringes</span>
+      <span class="dates">${fmt(x.from)} → ${fmt(p.s)}</span><p>Blir ferdig ${fmt(p.e)}, etter kundens frist ${fmt(j.latest)}. Planleggeren tar kontakt, eller jobben flyttes til en annen montør.</p></div>`;
+    return `<div class="note"><span class="who">${j.contact} · ${j.place}</span><span class="pill m">SMS</span>
+      <span class="dates">${fmt(x.from)} → ${fmt(p.s)}</span><p>«Hei ${j.contact}. ${j.task} ved ${j.place} er flyttet til ${fmt(p.s)}–${fmt(p.e)}. Svar JA for å bekrefte, eller velg en annen dato via lenken.»</p></div>`;
+  }).join('');
+}
+
+function toast(t){ const el=document.getElementById('toast'); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2800); }
+
+document.getElementById('urgentM').innerHTML = MONTORS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+document.getElementById('urgentM').value='j';
+document.getElementById('urgentBtn').onclick=()=>{
+  const m = document.getElementById('urgentM').value;
+  const opts = [['Akutt: Ungdomsskole','Feilretting etter vannskade',4,'Petter'],['Akutt: Sykehjem Nord','Utskifting etter brudd',3,'Randi'],['Akutt: Barnehage Elv','Strakstiltak',2,'Hanne']];
+  const o = opts[urgentCount++ % opts.length];
+  const id = 'u'+urgentCount;
+  jobs[id] = {id, place:o[0], task:o[1], dur:o[2], kind:'fleks', contact:o[3], fixed:null, latest:null, notBefore:null, extra:0, isNew:true};
+  queues[m].unshift(id); selected=id; render();
+  toast(`Hastejobb lagt inn først i køen til ${MONTORS.find(x=>x.id===m).name.split(' ')[0]}`);
+};
+document.getElementById('buffer').onchange=render;
+document.getElementById('resetBtn').onclick=()=>{ document.getElementById('buffer').checked=false; init(); render(); toast('Demoen er tilbakestilt'); };
+function discard(){
+  const st = JSON.parse(saved); jobs = st.jobs; queues = st.queues;
+  document.getElementById('buffer').checked = st.buf; selected = null; render(); toast('Endringene er forkastet');
+}
+function closeReview(){ document.getElementById('overlay').hidden = true; }
+function openReview(){
+  const D = diffs();
+  if (!D.length){ toast('Ingen endringer å sende'); return; }
+  const sms = D.filter(x=>x.type!=='conf'), conf = D.filter(x=>x.type==='conf');
+  const row = (x,i) => { const j=jobs[x.id], p=plan[x.id];
+    const when = x.from!=null ? `${fmt(x.from)} → ${fmt(p.s)}` : `${fmt(p.s)} – ${fmt(p.e)}`;
+    return `<div class="rv"><input type="checkbox" id="rv${i}" data-id="${x.id}" checked><label for="rv${i}"><b>${j.contact}</b> · ${j.place}</label><small>${when}${x.type==='ny'?' · ny jobb':''}</small></div>`; };
+  const dlg = document.getElementById('dialog');
+  dlg.innerHTML = `<header><span class="eyebrow">Kontrollpunkt</span><h2 id="rvTitle">Se over før noe sendes</h2>
+      <span class="sub" style="margin:0">Fjern haken på kunder du heller vil kontakte selv. De markeres for manuell oppfølging.</span></header>
+    <div class="body">
+      ${sms.length?`<div class="rvh">SMS (${sms.length})</div>${sms.map(row).join('')}`:''}
+      ${conf.length?`<div class="rvh">Må følges opp manuelt (${conf.length})</div>${conf.map(x=>{const j=jobs[x.id],p=plan[x.id];return `<div class="rv"><span></span><span><b>${j.contact}</b> · ${j.place}</span><small>Ferdig ${fmt(p.e)}, kundens frist er ${fmt(j.latest)}</small></div>`;}).join('')}`:''}
+    </div>
+    <footer><button class="btn" id="rvCancel">Tilbake til planen</button><button class="btn primary" id="rvSend">Godkjenn og send ${sms.length} SMS</button></footer>`;
+  const sendBtn = dlg.querySelector('#rvSend');
+  const upd = () => { const n = dlg.querySelectorAll('.rv input:checked').length; sendBtn.textContent = n ? `Godkjenn og send ${n} SMS` : 'Godkjenn uten SMS'; };
+  dlg.querySelectorAll('.rv input').forEach(c=>c.onchange=upd);
+  dlg.querySelector('#rvCancel').onclick = closeReview;
+  sendBtn.onclick = () => {
+    const off = new Set([...dlg.querySelectorAll('.rv input:not(:checked)')].map(c=>c.dataset.id));
+    sent = D.map(x=>{ const j=jobs[x.id], p=plan[x.id]; return {contact:j.contact, place:j.place, call:x.type==='conf'||off.has(x.id), txt:`${x.from!=null?fmt(x.from)+' → ':''}${fmt(p.s)}–${fmt(p.e)}`}; });
+    const n = sent.filter(s=>!s.call).length;
+    Object.values(jobs).forEach(j=>j.isNew=false);
+    baseline = snapshot(); saveState(); selected=null; closeReview(); render();
+    toast(`${n} SMS sendt (demo) · ${sent.length-n} til manuell oppfølging`);
+  };
+  document.getElementById('overlay').hidden = false;
+  sendBtn.focus();
+}
+document.getElementById('acceptBtn').onclick=openReview;
+document.getElementById('overlay').onclick=e=>{ if (e.target.id==='overlay') closeReview(); };
+document.addEventListener('keydown',e=>{ if (e.key==='Escape') closeReview(); });
+document.querySelectorAll('.fbtn[data-f]').forEach(b=>b.onclick=()=>{ const f=b.dataset.f; filters.has(f)?filters.delete(f):filters.add(f); render(); });
+document.getElementById('fclear').onclick=()=>{ filters.clear(); render(); };
+
+init(); render();
+</script>
+</body>
+</html>
